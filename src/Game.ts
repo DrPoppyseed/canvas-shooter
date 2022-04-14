@@ -13,6 +13,8 @@ export default class Game {
 
   constructor(canvas: HTMLCanvasElement | null | undefined) {
     this.canvas = Game.validateCanvas(canvas)
+    this.initializeCanvas()
+
     this.context = Game.validateContext(canvas)
     this.animationId = null
 
@@ -51,6 +53,11 @@ export default class Game {
 
     game.animate()
     game.spawnEnemies()
+  }
+
+  initializeCanvas = () => {
+    this.canvas.width = innerWidth
+    this.canvas.height = innerHeight
   }
 
   public createPlayer = ({
