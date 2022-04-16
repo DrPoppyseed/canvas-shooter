@@ -1,10 +1,12 @@
 import { Enemy } from './Enemy'
 import { getVelocity, isColliding } from './utils'
-import Player from './Player'
+import Player, { Particle } from './Player'
 import { MovingCircle } from './Circle'
+import gsap from 'gsap'
 
 export default class Game {
   projectiles: MovingCircle[]
+  particles: Particle[]
   enemies: Enemy[]
   player: Player
   canvas: HTMLCanvasElement
@@ -19,6 +21,7 @@ export default class Game {
     this.animationId = null
 
     this.projectiles = []
+    this.particles = []
     this.enemies = []
     this.player = this.createPlayer({})
   }
@@ -97,6 +100,26 @@ export default class Game {
     this.context.fillRect(0, 0, this.canvas.width, this.canvas.height * 2)
     this.player.draw(this.context)
 
+    this.particles.forEach((p, index) => {
+      if (p.alpha <= 0) {
+        setTimeout(() => {
+          this.particles.splice(index, 1)
+        }, 0)
+      } else {
+        p.update(this.context)
+      }
+      if (
+        p.x - p.radius < 0 ||
+        p.x - p.radius > this.canvas.width ||
+        p.y + p.radius < 0 ||
+        p.y - p.radius > this.canvas.height
+      ) {
+        setTimeout(() => {
+          this.projectiles.splice(index, 1)
+        }, 0)
+      }
+    })
+
     this.projectiles.forEach((p, index) => {
       p.update(this.context)
 
@@ -122,8 +145,25 @@ export default class Game {
 
       this.projectiles.forEach((projectile, projectileIdx) => {
         if (isColliding(projectile, enemy)) {
-          if (enemy.radius > 10) {
-            enemy.radius -= 10
+          for (let i = 0; i < enemy.radius * 2; i++) {
+            this.particles.push(
+              new Particle(
+                projectile.x,
+                projectile.y,
+                Math.random() * 5,
+                enemy.color,
+                {
+                  x: (Math.random() - 0.5) * (Math.random() * 8),
+                  y: (Math.random() - 0.5) * (Math.random() * 8),
+                }
+              )
+            )
+          }
+
+          if (enemy.radius - 10 > 5) {
+            gsap.to(enemy, {
+              radius: enemy.radius - 10,
+            })
             setTimeout(() => {
               this.projectiles.splice(projectileIdx, 1)
             }, 0)

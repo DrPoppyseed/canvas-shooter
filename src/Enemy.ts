@@ -14,9 +14,19 @@ export class Enemy extends MovingCircle {
   }
 
   public static spawn = (canvasWidth: number, canvasHeight: number) => {
-    const oX = Math.random() * canvasWidth
-    const oY = Math.random() * canvasHeight
     const radius = Math.random() * 10 + 10
+
+    let oX
+    let oY
+
+    if (Math.random() < 0.5) {
+      oX = Math.random() < 0.5 ? 0 - radius : canvasWidth + radius
+      oY = Math.random() * canvasHeight
+    } else {
+      oX = Math.random() * canvasWidth
+      oY = Math.random() < 0.5 ? 0 - radius : canvasHeight + radius
+    }
+
     const color = `hsl(${Math.random() * 360}, 50%, 50%)`
     const velocity = getVelocity({
       oX,
