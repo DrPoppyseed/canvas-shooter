@@ -1,5 +1,5 @@
 import { Circle, MovingCircle } from './Circle'
-import { Velocity } from './types'
+import { Velocity } from '../types'
 
 export default class Player extends Circle {
   constructor(x: number, y: number, radius: number, color: string) {

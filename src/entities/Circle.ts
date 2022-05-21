@@ -1,4 +1,4 @@
-import { Velocity } from './types'
+import { Velocity } from '../types'
 
 export class Circle {
   x: number

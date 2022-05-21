@@ -1,6 +1,6 @@
 import { MovingCircle } from './Circle'
-import { Velocity } from './types'
-import { getVelocity } from './utils'
+import { Velocity } from '../types'
+import { getVelocity } from '../utils'
 
 export class Enemy extends MovingCircle {
   constructor(
