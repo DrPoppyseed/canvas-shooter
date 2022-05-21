@@ -3,18 +3,12 @@ import { getVelocity, isColliding } from './utils'
 import Player, { Particle } from './entities/Player'
 import { MovingCircle } from './entities/Circle'
 import gsap from 'gsap'
+import { Coords, Stats } from './types'
+import { gsapFadeIn, gsapFadeOut } from './animations'
 
 export const GameStatusKeys = ['up', 'down', 'paused']
 export type GameStatusTuple = typeof GameStatusKeys
 export type GameStatus = GameStatusTuple[number]
-
-export type Stats = {
-  score: number
-  projectiles: number
-  eliminations: number
-  deaths: number
-  time: number
-}
 
 export const defaultStats: Stats = {
   score: 0,
@@ -101,9 +95,68 @@ export default class Game {
 
     canvasEl.addEventListener('click', event => {
       const { clientX, clientY } = event
+      const { x, y } = game.player
 
       if (Game.getGameStatus() === 'up') {
-        game.shootProjectile(clientX, clientY)
+        game.shootProjectile({ x, y }, { x: clientX, y: clientY })
+      }
+    })
+
+    addEventListener('keydown', event => {
+      switch (event.code) {
+        case 'KeyD':
+        case 'ArrowRight':
+          game.player.velocity.x = 1
+          break
+        case 'KeyA':
+        case 'ArrowLeft':
+          game.player.velocity.x = -1
+          break
+        case 'KeyW':
+        case 'ArrowUp':
+          game.player.velocity.y = -1
+          break
+        case 'KeyS':
+        case 'ArrowDown':
+          game.player.velocity.y = 1
+          break
+        case 'Escape':
+          if (game.gameStatus === 'paused') {
+            game.resume()
+            game.gameStatus = 'up'
+          } else {
+            game.stop()
+            game.gameStatus = 'paused'
+          }
+          break
+        case 'Tab':
+          game.restart()
+          break
+        default:
+          break
+      }
+    })
+
+    addEventListener('keyup', event => {
+      switch (event.code) {
+        case 'KeyD':
+        case 'ArrowRight':
+          game.player.velocity.x = 0
+          break
+        case 'KeyA':
+        case 'ArrowLeft':
+          game.player.velocity.x = 0
+          break
+        case 'KeyW':
+        case 'ArrowUp':
+          game.player.velocity.y = 0
+          break
+        case 'KeyS':
+        case 'ArrowDown':
+          game.player.velocity.y = 0
+          break
+        default:
+          break
       }
     })
 
@@ -115,8 +168,15 @@ export default class Game {
     })
   }
 
+  public resume = () => {
+    this.animate()
+    this.spawnEnemies()
+  }
+
   public restart = () => {
-    gameOverPromptEl.style.display = 'none'
+    gsapFadeOut('#gameOverPromptEl', () => {
+      gameOverPromptEl.style.display = 'none'
+    })
 
     // initialize the class instance
     this.initialize({})
@@ -189,9 +249,10 @@ export default class Game {
     }, 1000)
   }
 
-  public shootProjectile = (clientX: number, clientY: number): void => {
-    const x = this.canvas.width / 2
-    const y = this.canvas.height / 2
+  public shootProjectile = (origin: Coords, client: Coords): void => {
+    const { x, y } = origin
+    const { x: clientX, y: clientY } = client
+
     const velocity = getVelocity({
       oX: x,
       tX: clientX,
@@ -199,6 +260,7 @@ export default class Game {
       tY: clientY,
       speed: 4,
     })
+
     this.projectiles.push(new MovingCircle(x, y, 5, 'white', velocity))
 
     // update the projectile stat on new projectile creation
@@ -217,7 +279,7 @@ export default class Game {
     this.animationId = requestAnimationFrame(this.animate)
     this.context.fillStyle = 'rgba(0, 0, 0, 0.2)'
     this.context.fillRect(0, 0, this.canvas.width, this.canvas.height * 2)
-    this.player.draw(this.context)
+    this.player.update(this.context, this.canvas)
 
     this.particles.forEach((p, index) => {
       if (p.alpha <= 0) {
@@ -239,16 +301,7 @@ export default class Game {
 
       // Game over
       if (isColliding(this.player, enemy)) {
-        this.stats.deaths += 1
-        deathsStatEl.innerHTML = `${this.stats.deaths}`
-        this.stop()
-        clearInterval(this.intervalId)
-
-        // show game over prompt modal
-        gameOverPromptEl.style.display = 'flex'
-
-        this.gameStatus = 'down'
-        this.updatePersistentGameStatus()
+        this.gameOver()
       }
 
       this.projectiles.forEach((projectile, projectileIdx) => {
@@ -295,6 +348,20 @@ export default class Game {
         }
       })
     })
+  }
+
+  private gameOver = () => {
+    this.stats.deaths += 1
+    deathsStatEl.innerHTML = `${this.stats.deaths}`
+    this.stop()
+    clearInterval(this.intervalId)
+
+    // show game over prompt modal
+    gsapFadeIn('#gameOverPromptEl')
+    gameOverPromptEl.style.display = 'flex'
+
+    this.gameStatus = 'down'
+    this.updatePersistentGameStatus()
   }
 
   private updateScoreFromEnemyRadius = (enemyRadius: number): void => {

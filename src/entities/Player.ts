@@ -1,9 +1,48 @@
 import { Circle, MovingCircle } from './Circle'
-import { Velocity } from '../types'
+import { Dimensions, Velocity } from '../types'
 
 export default class Player extends Circle {
-  constructor(x: number, y: number, radius: number, color: string) {
+  velocity: Velocity
+
+  constructor(
+    x: number,
+    y: number,
+    radius: number,
+    color: string,
+    velocity?: Velocity
+  ) {
+    if (velocity === undefined) {
+      velocity = {
+        x: 0,
+        y: 0,
+      }
+    }
     super(x, y, radius, color)
+    this.velocity = velocity
+  }
+
+  draw = (context: CanvasRenderingContext2D) => {
+    context.beginPath()
+    context.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false)
+    context.fillStyle = this.color
+    context.fill()
+  }
+
+  update = (
+    context: CanvasRenderingContext2D,
+    { width, height }: Dimensions
+  ) => {
+    this.draw(context)
+
+    // make sure the player doesn't go out of bounds
+    if (this.x + this.radius + this.velocity.x <= width - 1) {
+      this.x += this.velocity.x
+    } else {
+      this.velocity.x = 0
+    }
+    if (this.y + this.radius + this.velocity.y <= height - 1) {
+      this.y += this.velocity.y
+    }
   }
 }
 

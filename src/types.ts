@@ -8,3 +8,21 @@ export type Point = {
   y: number
   radius: number
 }
+
+export type Stats = {
+  score: number
+  projectiles: number
+  eliminations: number
+  deaths: number
+  time: number
+}
+
+export type Dimensions = {
+  width: number
+  height: number
+}
+
+export type Coords = {
+  x: number
+  y: number
+}
