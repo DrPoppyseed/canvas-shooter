@@ -1,20 +1,40 @@
-import { MovingCircle } from './Circle'
 import { Velocity } from '../types'
 import { getVelocity } from '../utils'
 
-export class Enemy extends MovingCircle {
-  constructor(
-    x: number,
-    y: number,
-    radius: number,
-    color: string,
+export class Enemy {
+  x: number
+  y: number
+  health: number
+  radius: number
+  color: string
+  velocity: Velocity
+
+  constructor({
+    x,
+    y,
+    health,
+    radius,
+    color,
+    velocity,
+  }: {
+    x: number
+    y: number
+    health: number
+    radius: number
+    color: string
     velocity: Velocity
-  ) {
-    super(x, y, radius, color, velocity)
+  }) {
+    this.x = x
+    this.y = y
+    this.radius = radius
+    this.color = color
+    this.velocity = velocity
+    this.health = health
   }
 
   public static spawn = (canvasWidth: number, canvasHeight: number) => {
-    const radius = Math.random() * 10 + 10
+    const health = parseInt((Math.random() * 10 + 10).toFixed(0))
+    const radius = health
 
     let oX
     let oY
@@ -34,6 +54,29 @@ export class Enemy extends MovingCircle {
       oY,
       tY: canvasHeight / 2,
     })
-    return new Enemy(oX, oY, radius, color, velocity)
+    return new Enemy({ x: oX, y: oY, health, radius, color, velocity })
+  }
+
+  public draw = (c: CanvasRenderingContext2D) => {
+    c.beginPath()
+    c.arc(this.x, this.y, this.radius, 0, Math.PI * 2)
+    c.fillStyle = this.color
+    c.fill()
+  }
+
+  public drawHealth = (c: CanvasRenderingContext2D) => {
+    const fontSize = this.radius * 2
+
+    c.font = `${fontSize}`
+    c.textAlign = 'center'
+    c.fillStyle = 'black'
+    c.fillText(`${this.health}`, this.x, this.y + fontSize / 10)
+  }
+
+  public update = (c: CanvasRenderingContext2D) => {
+    this.draw(c)
+    this.drawHealth(c)
+    this.x = this.x + this.velocity.x
+    this.y = this.y + this.velocity.y
   }
 }

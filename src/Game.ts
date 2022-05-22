@@ -2,9 +2,9 @@ import { Enemy } from './entities/Enemy'
 import { getVelocity, isColliding } from './utils'
 import Player, { Particle } from './entities/Player'
 import { MovingCircle } from './entities/Circle'
-import gsap from 'gsap'
 import { Coords, Stats } from './types'
 import { gsapFadeIn, gsapFadeOut } from './animations'
+import { PLAYER_UPGRADES } from './constants'
 
 export const GameStatusKeys = ['up', 'down', 'paused']
 export type GameStatusTuple = typeof GameStatusKeys
@@ -29,7 +29,8 @@ const restartBtn = document.querySelector('#restartBtn')!
 const canvasEl = document.querySelector('canvas')!
 
 export default class Game {
-  intervalId: any
+  intervalId?: number
+  shootingIntervalId?: number
   projectiles: Array<MovingCircle>
   particles: Array<Particle>
   enemies: Array<Enemy>
@@ -47,6 +48,7 @@ export default class Game {
     this.context = Game.validateContext(canvas)
     this.animationId = null
 
+    this.shootingIntervalId = undefined
     this.intervalId = undefined
     this.player = this.createPlayer({})
     this.animationId = null
@@ -240,11 +242,11 @@ export default class Game {
   }): Player => {
     const playerX = this.canvas.width / 2
     const playerY = this.canvas.height / 2
-    return new Player(playerX, playerY, radius, color)
+    return new Player({ x: playerX, y: playerY, radius, color })
   }
 
   public spawnEnemies = (): void => {
-    this.intervalId = setInterval(() => {
+    this.intervalId = window.setInterval(() => {
       this.enemies.push(Enemy.spawn(this.canvas.width, this.canvas.height))
     }, 1000)
   }
@@ -272,6 +274,19 @@ export default class Game {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId)
       this.animationId = null
+    }
+  }
+
+  public particleEffects = (projectile: MovingCircle, enemy: Enemy) => {
+    for (let i = 0; i < enemy.radius * 2; i++) {
+      this.particles.push(
+        Particle.spawn({
+          projectileCoords: {
+            ...projectile,
+          },
+          color: enemy.color,
+        })
+      )
     }
   }
 
@@ -305,49 +320,50 @@ export default class Game {
       }
 
       this.projectiles.forEach((projectile, projectileIdx) => {
+        // handle what happens when the projectile hits the enemy
         if (isColliding(projectile, enemy)) {
-          for (let i = 0; i < enemy.radius * 2; i++) {
-            this.particles.push(
-              new Particle(
-                projectile.x,
-                projectile.y,
-                Math.random() * 5,
-                enemy.color,
-                {
-                  x: (Math.random() - 0.5) * (Math.random() * 8),
-                  y: (Math.random() - 0.5) * (Math.random() * 8),
-                }
+          // decrease enemy health
+          const updatedEnemyHealth = enemy.health - this.player.damage
+
+          setTimeout(() => {
+            if (updatedEnemyHealth > 0) {
+              this.enemies.splice(
+                i,
+                1,
+                new Enemy({
+                  ...enemy,
+                  health: updatedEnemyHealth,
+                })
               )
-            )
-          }
+            } else {
+              // update the stats
+              this.updateScoreFromEnemyRadius(enemy.radius)
+              this.stats.eliminations += 1
+              elimsStatEl.innerHTML = `${this.stats.eliminations}`
 
-          if (enemy.radius - 10 > 5) {
-            // update the stats
-            this.updateScoreFromEnemyRadius(enemy.radius)
+              // update player attack damage on score milestones
+              this.player.damage = this.checkForAndGetUpgradeAttack()
 
-            // animate smooth enemy shrinking animation
-            gsap.to(enemy, {
-              radius: enemy.radius - 10,
-            })
+              // Particle effects
+              this.particleEffects(projectile, enemy)
 
-            // remove projectile after collision
-            setTimeout(() => {
-              this.projectiles.splice(projectileIdx, 1)
-            }, 0)
-          } else {
-            // update the stats
-            this.updateScoreFromEnemyRadius(enemy.radius)
-            this.stats.eliminations += 1
-            elimsStatEl.innerHTML = `${this.stats.eliminations}`
-
-            setTimeout(() => {
               this.enemies.splice(i, 1)
-              this.projectiles.splice(projectileIdx, 1)
-            }, 0)
-          }
+            }
+            this.projectiles.splice(projectileIdx, 1)
+          }, 0)
         }
       })
     })
+  }
+
+  private checkForAndGetUpgradeAttack = (): number => {
+    // get the upgrades that are applied to the player
+    const appliedUpgrades = PLAYER_UPGRADES.filter(
+      upgrade => this.stats.score >= upgrade.scoreRequired
+    )
+    const appliedUpgrade = appliedUpgrades[appliedUpgrades.length - 1]
+
+    return appliedUpgrade.upgradedAttack
   }
 
   private gameOver = () => {

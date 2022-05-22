@@ -1,16 +1,28 @@
 import { Circle, MovingCircle } from './Circle'
-import { Dimensions, Velocity } from '../types'
+import { Coords, Dimensions, Velocity } from '../types'
 
 export default class Player extends Circle {
   velocity: Velocity
+  damage: number
+  health: number
 
-  constructor(
-    x: number,
-    y: number,
-    radius: number,
-    color: string,
+  constructor({
+    x,
+    y,
+    damage = 1,
+    health = 1,
+    radius,
+    color,
+    velocity,
+  }: {
+    x: number
+    y: number
+    damage?: number
+    health?: number
+    radius: number
+    color: string
     velocity?: Velocity
-  ) {
+  }) {
     if (velocity === undefined) {
       velocity = {
         x: 0,
@@ -18,6 +30,9 @@ export default class Player extends Circle {
       }
     }
     super(x, y, radius, color)
+
+    this.damage = damage
+    this.health = health
     this.velocity = velocity
   }
 
@@ -59,6 +74,40 @@ export class Particle extends MovingCircle {
   ) {
     super(x, y, radius, color, velocity)
     this.alpha = 1
+  }
+
+  static spawn = ({
+    projectileCoords,
+    radius,
+    color,
+    velocity,
+  }: {
+    projectileCoords: Coords
+    radius?: number
+    color: string
+    velocity?: Velocity
+  }): Particle => {
+    // create reasonable defaults
+    // velocity:
+    if (velocity === undefined) {
+      velocity = {
+        x: (Math.random() - 0.5) * (Math.random() * 8),
+        y: (Math.random() - 0.5) * (Math.random() * 8),
+      }
+    }
+
+    // radius:
+    if (radius === undefined) {
+      radius = Math.random() * 5
+    }
+
+    return new Particle(
+      projectileCoords.x,
+      projectileCoords.y,
+      radius,
+      color,
+      velocity
+    )
   }
 
   draw = (context: CanvasRenderingContext2D) => {
