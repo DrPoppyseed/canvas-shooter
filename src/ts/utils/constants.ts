@@ -14,10 +14,10 @@ export const PLAYER_UPGRADES: ReadonlyArray<PlayerUpgrade> = [
   },
   {
     scoreRequired: 5000,
-    upgradedAttack: 4,
+    upgradedAttack: 3,
   },
   {
     scoreRequired: 20000,
-    upgradedAttack: 8,
+    upgradedAttack: 4,
   },
 ]

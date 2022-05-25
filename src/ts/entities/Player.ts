@@ -1,10 +1,13 @@
 import { Circle, MovingCircle } from './Circle'
 import { Coords, Dimensions, Velocity } from '../types'
 
+export type PowerUps = 'machineGun'
+
 export default class Player extends Circle {
   velocity: Velocity
   damage: number
   health: number
+  powerUp: PowerUps | null
 
   constructor({
     x,
@@ -34,6 +37,7 @@ export default class Player extends Circle {
     this.damage = damage
     this.health = health
     this.velocity = velocity
+    this.powerUp = null
   }
 
   draw = (context: CanvasRenderingContext2D) => {
@@ -50,13 +54,21 @@ export default class Player extends Circle {
     this.draw(context)
 
     // make sure the player doesn't go out of bounds
-    if (this.x + this.radius + this.velocity.x <= width - 1) {
+    if (
+      this.x + this.radius + this.velocity.x <= width &&
+      this.x - this.radius + this.velocity.x >= 0
+    ) {
       this.x += this.velocity.x
     } else {
       this.velocity.x = 0
     }
-    if (this.y + this.radius + this.velocity.y <= height - 1) {
+    if (
+      this.y + this.radius + this.velocity.y <= height &&
+      this.y - this.radius + this.velocity.y >= 0
+    ) {
       this.y += this.velocity.y
+    } else {
+      this.velocity.y = 0
     }
   }
 }

@@ -1,9 +1,12 @@
-import { Velocity } from '../types'
-import { getVelocity } from '../utils'
+import { Coords, Velocity } from '../types'
+import { getVelocity } from '../utils/utils'
+
+export type EnemyMovementType = 'homing' | 'linear'
 
 export class Enemy {
   x: number
   y: number
+  movementType: EnemyMovementType
   health: number
   radius: number
   color: string
@@ -12,6 +15,7 @@ export class Enemy {
   constructor({
     x,
     y,
+    movementType,
     health,
     radius,
     color,
@@ -19,6 +23,7 @@ export class Enemy {
   }: {
     x: number
     y: number
+    movementType?: EnemyMovementType
     health: number
     radius: number
     color: string
@@ -30,6 +35,16 @@ export class Enemy {
     this.color = color
     this.velocity = velocity
     this.health = health
+
+    if (movementType === undefined) {
+      if (Math.random() < 0.3) {
+        movementType = 'homing'
+      } else {
+        movementType = 'linear'
+      }
+    }
+
+    this.movementType = movementType
   }
 
   public static spawn = (canvasWidth: number, canvasHeight: number) => {
@@ -53,6 +68,7 @@ export class Enemy {
       tX: canvasWidth / 2,
       oY,
       tY: canvasHeight / 2,
+      speed: Math.random() * 2,
     })
     return new Enemy({ x: oX, y: oY, health, radius, color, velocity })
   }
@@ -73,9 +89,18 @@ export class Enemy {
     c.fillText(`${this.health}`, this.x, this.y + fontSize / 10)
   }
 
-  public update = (c: CanvasRenderingContext2D) => {
+  public update = (c: CanvasRenderingContext2D, playerCoords: Coords) => {
     this.draw(c)
     this.drawHealth(c)
+
+    // Add homing capability
+    if (this.movementType === 'homing') {
+      const { x, y } = playerCoords
+      const angle = Math.atan2(y - this.y, x - this.x)
+      this.velocity.x = Math.cos(angle)
+      this.velocity.y = Math.sin(angle)
+    }
+
     this.x = this.x + this.velocity.x
     this.y = this.y + this.velocity.y
   }

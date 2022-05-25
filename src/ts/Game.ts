@@ -1,10 +1,17 @@
 import { Enemy } from './entities/Enemy'
-import { getVelocity, isColliding } from './utils'
+import { getVelocity, isColliding } from './utils/utils'
 import Player, { Particle } from './entities/Player'
 import { MovingCircle } from './entities/Circle'
 import { Coords, Stats } from './types'
-import { gsapFadeIn, gsapFadeOut } from './animations'
-import { PLAYER_UPGRADES } from './constants'
+import { gsapFadeIn, gsapFadeOut } from './utils/animations'
+import { PLAYER_UPGRADES } from './utils/constants'
+import { PowerUp } from './entities/PowerUp'
+import State from './State'
+import Component from './Component'
+
+export type Mouse = {
+  position: Coords
+}
 
 export const GameStatusKeys = ['up', 'down', 'paused']
 export type GameStatusTuple = typeof GameStatusKeys
@@ -25,39 +32,39 @@ const scoreStatEl = document.querySelector('#scoreStatEl')!
 const elimsStatEl = document.querySelector('#elimsStatEl')!
 const deathsStatEl = document.querySelector('#deathsStatEl')!
 const shotsStatEl = document.querySelector('#shotsStatEl')!
-const restartBtn = document.querySelector('#restartBtn')!
-const canvasEl = document.querySelector('canvas')!
+//const resumeBtn = document.querySelector('#resumeBtn')!
 
-export default class Game {
-  intervalId?: number
-  shootingIntervalId?: number
+export default class Game extends Component {
   projectiles: Array<MovingCircle>
   particles: Array<Particle>
   enemies: Array<Enemy>
-  player: Player
-  canvas: HTMLCanvasElement
-  context: CanvasRenderingContext2D
+  powerUps: Array<PowerUp>
   animationId: number | null
-  stats: Stats
   gameStatus: GameStatus
+  frames: number
+  mouse: Mouse
+  spawnPowerUpsId?: number
 
-  constructor(canvas: HTMLCanvasElement | null | undefined) {
-    this.canvas = Game.validateCanvas(canvas)
+  constructor(canvas: HTMLCanvasElement, state: State) {
+    super(canvas, state)
+
     this.initializeCanvas()
 
-    this.context = Game.validateContext(canvas)
     this.animationId = null
 
-    this.shootingIntervalId = undefined
-    this.intervalId = undefined
-    this.player = this.createPlayer({})
+    this.state.set({ key: 'player', value: this.createPlayer({}) })
+
     this.animationId = null
     this.projectiles = []
     this.particles = []
     this.enemies = []
-    this.stats = defaultStats
     this.gameStatus = 'up'
     this.updatePersistentGameStatus()
+
+    this.powerUps = []
+    this.frames = 0
+    this.mouse = { position: { x: 0, y: 0 } }
+    this.spawnPowerUpsId = undefined
   }
 
   static getGameStatus = (): GameStatus => {
@@ -72,104 +79,6 @@ export default class Game {
     return gameStatus
   }
 
-  static validateCanvas = (
-    canvas: HTMLCanvasElement | null | undefined
-  ): HTMLCanvasElement => {
-    if (!canvas) throw new Error('could not retrieve canvas element')
-
-    return canvas
-  }
-
-  static validateContext = (
-    canvas: HTMLCanvasElement | null | undefined
-  ): CanvasRenderingContext2D => {
-    Game.validateCanvas(canvas)
-    const context = canvas?.getContext('2d')
-
-    if (!context) throw new Error('could not retrieve canvas context')
-    return context
-  }
-
-  static run = () => {
-    const canvas = document.querySelector('canvas')
-
-    const game = new Game(canvas)
-
-    canvasEl.addEventListener('click', event => {
-      const { clientX, clientY } = event
-      const { x, y } = game.player
-
-      if (Game.getGameStatus() === 'up') {
-        game.shootProjectile({ x, y }, { x: clientX, y: clientY })
-      }
-    })
-
-    addEventListener('keydown', event => {
-      switch (event.code) {
-        case 'KeyD':
-        case 'ArrowRight':
-          game.player.velocity.x = 1
-          break
-        case 'KeyA':
-        case 'ArrowLeft':
-          game.player.velocity.x = -1
-          break
-        case 'KeyW':
-        case 'ArrowUp':
-          game.player.velocity.y = -1
-          break
-        case 'KeyS':
-        case 'ArrowDown':
-          game.player.velocity.y = 1
-          break
-        case 'Escape':
-          if (game.gameStatus === 'paused') {
-            game.resume()
-            game.gameStatus = 'up'
-          } else {
-            game.stop()
-            game.gameStatus = 'paused'
-          }
-          break
-        case 'Tab':
-          game.restart()
-          break
-        default:
-          break
-      }
-    })
-
-    addEventListener('keyup', event => {
-      switch (event.code) {
-        case 'KeyD':
-        case 'ArrowRight':
-          game.player.velocity.x = 0
-          break
-        case 'KeyA':
-        case 'ArrowLeft':
-          game.player.velocity.x = 0
-          break
-        case 'KeyW':
-        case 'ArrowUp':
-          game.player.velocity.y = 0
-          break
-        case 'KeyS':
-        case 'ArrowDown':
-          game.player.velocity.y = 0
-          break
-        default:
-          break
-      }
-    })
-
-    game.animate()
-    game.spawnEnemies()
-
-    restartBtn.addEventListener('click', () => {
-      game.restart()
-    })
-  }
-
   public resume = () => {
     this.animate()
     this.spawnEnemies()
@@ -181,50 +90,31 @@ export default class Game {
     })
 
     // initialize the class instance
-    this.initialize({})
+    this.initialize()
     this.animate()
     this.spawnEnemies()
-
-    // initialize the HTML elements
-    scoreStatEl.innerHTML = '0'
-    elimsStatEl.innerHTML = '0'
-    shotsStatEl.innerHTML = '0'
+    this.spawnPowerUps()
   }
 
   public updatePersistentGameStatus = (): void => {
     sessionStorage.setItem('gameStatus', this.gameStatus)
   }
 
-  public initialize = ({
-    animationId = null,
-    projectiles = [],
-    particles = [],
-    enemies = [],
-    player,
-    stats = defaultStats,
-    gameStatus = 'up',
-  }: {
-    animationId?: number | null
-    projectiles?: Array<MovingCircle>
-    particles?: Array<Particle>
-    enemies?: Array<Enemy>
-    player?: Player
-    stats?: Stats
-    gameStatus?: GameStatus
-  }) => {
-    // initialize with empty player object if parameter not given
-    if (player === undefined) {
-      this.player = this.createPlayer({})
-    } else {
-      this.player = player
-    }
+  public initialize = () => {
+    this.state.set({ key: 'player', value: this.createPlayer({}) })
+    this.state.set({
+      key: 'stats',
+      value: {
+        ...defaultStats,
+        deaths: this.state.get('stats').deaths + 1,
+      },
+    })
 
-    this.animationId = animationId
-    this.particles = particles
-    this.projectiles = projectiles
-    this.enemies = enemies
-    this.stats = { ...stats, deaths: this.stats.deaths }
-    this.gameStatus = gameStatus
+    this.animationId = null
+    this.particles = []
+    this.projectiles = []
+    this.enemies = []
+    this.gameStatus = 'up'
     this.updatePersistentGameStatus()
   }
 
@@ -246,9 +136,30 @@ export default class Game {
   }
 
   public spawnEnemies = (): void => {
-    this.intervalId = window.setInterval(() => {
+    const intervalId = window.setInterval(() => {
       this.enemies.push(Enemy.spawn(this.canvas.width, this.canvas.height))
-    }, 1000)
+    }, Math.random() * 1000 + 500)
+    this.state.set({ key: 'intervalId', value: intervalId })
+  }
+
+  public spawnPowerUps = (): void => {
+    this.spawnPowerUpsId = window.setInterval(() => {
+      this.powerUps.push(
+        new PowerUp({
+          coords: {
+            //x: -30,
+            //y: Math.random() * this.canvas.height,
+            x: 200,
+            y: 200,
+          },
+          velocity: {
+            x: Math.random() + 2,
+            y: 0,
+          },
+        })
+      )
+      console.log(this.powerUps)
+    }, 5000)
   }
 
   public shootProjectile = (origin: Coords, client: Coords): void => {
@@ -260,14 +171,20 @@ export default class Game {
       tX: clientX,
       oY: y,
       tY: clientY,
-      speed: 4,
+      speed: 8,
     })
 
-    this.projectiles.push(new MovingCircle(x, y, 5, 'white', velocity))
+    this.projectiles.push(new MovingCircle(x, y, 4, 'white', velocity))
 
     // update the projectile stat on new projectile creation
-    this.stats.projectiles += 1
-    shotsStatEl.innerHTML = `${this.stats.projectiles}`
+    this.state.set({
+      key: 'stats',
+      value: {
+        ...this.state.get('stats'),
+        projectiles: this.state.get('stats').projectiles + 1,
+      },
+    })
+    shotsStatEl.innerHTML = `${this.state.get('stats').projectiles}`
   }
 
   public stop = () => {
@@ -291,10 +208,55 @@ export default class Game {
   }
 
   public animate = (): void => {
+    const player = this.state.get('player')
+
     this.animationId = requestAnimationFrame(this.animate)
-    this.context.fillStyle = 'rgba(0, 0, 0, 0.2)'
+    this.context.fillStyle = 'rgba(0, 0, 0, 0.5)'
     this.context.fillRect(0, 0, this.canvas.width, this.canvas.height * 2)
-    this.player.update(this.context, this.canvas)
+    player.update(this.context, this.canvas)
+    this.frames += 1
+
+    // handle PowerUp
+    this.powerUps.forEach((powerUp, i) => {
+      if (powerUp.coords.x > this.canvas.width) {
+        this.powerUps.splice(i, 1)
+      } else {
+        powerUp.update(this.context)
+      }
+
+      const dist = Math.hypot(
+        player.x - powerUp.coords.x,
+        player.y - powerUp.coords.y
+      )
+
+      // when the player collides with powerUp
+      if (dist < powerUp.image.height / 2 + player.radius) {
+        this.powerUps.splice(i, 1)
+        player.powerUp = 'machineGun'
+        player.color = 'yellow'
+
+        setTimeout(() => {
+          player.powerUp = null
+          player.color = 'white'
+        }, 5000)
+      }
+    })
+
+    if (player.powerUp === 'machineGun') {
+      const angle = Math.atan2(
+        this.mouse.position.y - player.y,
+        this.mouse.position.x - player.x
+      )
+      const velocity = {
+        x: Math.cos(angle) * 5,
+        y: Math.sin(angle) * 5,
+      }
+
+      if (this.frames % 2 === 0)
+        this.projectiles.push(
+          new MovingCircle(player.x, player.y, 5, 'yellow', velocity)
+        )
+    }
 
     this.particles.forEach((p, index) => {
       if (p.alpha <= 0) {
@@ -312,10 +274,10 @@ export default class Game {
     })
 
     this.enemies.forEach((enemy, i) => {
-      enemy.update(this.context)
+      enemy.update(this.context, { x: player.x, y: player.y })
 
       // Game over
-      if (isColliding(this.player, enemy)) {
+      if (isColliding(player, enemy)) {
         this.gameOver()
       }
 
@@ -323,7 +285,7 @@ export default class Game {
         // handle what happens when the projectile hits the enemy
         if (isColliding(projectile, enemy)) {
           // decrease enemy health
-          const updatedEnemyHealth = enemy.health - this.player.damage
+          const updatedEnemyHealth = enemy.health - player.damage
 
           setTimeout(() => {
             if (updatedEnemyHealth > 0) {
@@ -338,11 +300,11 @@ export default class Game {
             } else {
               // update the stats
               this.updateScoreFromEnemyRadius(enemy.radius)
-              this.stats.eliminations += 1
-              elimsStatEl.innerHTML = `${this.stats.eliminations}`
+              this.state.get('stats').eliminations += 1
+              elimsStatEl.innerHTML = `${this.state.get('stats').eliminations}`
 
               // update player attack damage on score milestones
-              this.player.damage = this.checkForAndGetUpgradeAttack()
+              player.damage = this.checkForAndGetUpgradeAttack()
 
               // Particle effects
               this.particleEffects(projectile, enemy)
@@ -359,7 +321,7 @@ export default class Game {
   private checkForAndGetUpgradeAttack = (): number => {
     // get the upgrades that are applied to the player
     const appliedUpgrades = PLAYER_UPGRADES.filter(
-      upgrade => this.stats.score >= upgrade.scoreRequired
+      upgrade => this.state.get('stats').score >= upgrade.scoreRequired
     )
     const appliedUpgrade = appliedUpgrades[appliedUpgrades.length - 1]
 
@@ -367,10 +329,17 @@ export default class Game {
   }
 
   private gameOver = () => {
-    this.stats.deaths += 1
-    deathsStatEl.innerHTML = `${this.stats.deaths}`
+    const stats = this.state.get('stats')
+    this.state.set({
+      key: 'stats',
+      value: {
+        ...stats,
+        deaths: stats.deaths + 1,
+      },
+    })
+    deathsStatEl.innerHTML = `${stats.deaths}`
     this.stop()
-    clearInterval(this.intervalId)
+    clearInterval(this.state.get('intervalId'))
 
     // show game over prompt modal
     gsapFadeIn('#gameOverPromptEl')
@@ -381,9 +350,10 @@ export default class Game {
   }
 
   private updateScoreFromEnemyRadius = (enemyRadius: number): void => {
+    const stats = this.state.get('stats')
     const score = parseInt(enemyRadius.toFixed(2)) * 100
-    this.stats.score += score
-    scoreStatEl.innerHTML = `${this.stats.score}`
+    stats.score += score
+    scoreStatEl.innerHTML = `${stats.score}`
   }
 
   // Check if the projectile coordinates is out of the canvas's bounds.

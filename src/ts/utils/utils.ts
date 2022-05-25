@@ -1,9 +1,10 @@
-import { Point, Velocity } from './types'
+import { Point, Velocity } from '../types'
 
 export const getRandomInt = (min: number, max: number): number => {
   const randMin = Math.ceil(min)
   const randMax = Math.floor(max)
-  return Math.floor(Math.random() * (randMax - randMin) + randMin) //The maximum is exclusive and the randMinimum is inclusive
+  return Math.floor(Math.random() * (randMax - randMin) + randMin) //The maximum is exclusive and the randMinimum is
+  // inclusive
 }
 
 export const getVelocity = ({

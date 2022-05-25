@@ -1,11 +1,18 @@
 {
   "compilerOptions": {
+    "target": "esnext",
+    "useDefineForClassFields": true,
+    "module": "esnext",
     "strict": true,
-    "module": "commonjs",
-    "jsx": "preserve",
-    "esModuleInterop": true,
     "sourceMap": true,
-    "allowJs": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "noEmit": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "skipLibCheck": true,
     "lib": [
       "es6",
       "dom"
