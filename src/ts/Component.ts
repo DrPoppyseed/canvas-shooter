@@ -1,13 +1,9 @@
-import State from './State'
-
 export default class Component {
-  protected state: State
   protected canvas: HTMLCanvasElement
   protected context: CanvasRenderingContext2D
 
-  constructor(canvas: HTMLCanvasElement, state: State) {
+  constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
-    this.state = state
     this.context = this.getValidContext(canvas)
   }
 

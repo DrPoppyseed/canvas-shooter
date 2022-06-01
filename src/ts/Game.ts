@@ -2,12 +2,12 @@ import { Enemy } from './entities/Enemy'
 import { getVelocity, isColliding } from './utils/utils'
 import Player, { Particle } from './entities/Player'
 import { MovingCircle } from './entities/Circle'
-import { Coords, Stats } from './types'
+import { Coords } from './types'
 import { gsapFadeIn, gsapFadeOut } from './utils/animations'
 import { PLAYER_UPGRADES } from './utils/constants'
 import { PowerUp } from './entities/PowerUp'
-import State from './State'
 import Component from './Component'
+import { state } from './index'
 
 export type Mouse = {
   position: Coords
@@ -16,14 +16,6 @@ export type Mouse = {
 export const GameStatusKeys = ['up', 'down', 'paused']
 export type GameStatusTuple = typeof GameStatusKeys
 export type GameStatus = GameStatusTuple[number]
-
-export const defaultStats: Stats = {
-  score: 0,
-  projectiles: 0,
-  eliminations: 0,
-  deaths: 0,
-  time: 0,
-}
 
 // querySelectors for HTML Elements
 const gameOverPromptEl =
@@ -45,14 +37,14 @@ export default class Game extends Component {
   mouse: Mouse
   spawnPowerUpsId?: number
 
-  constructor(canvas: HTMLCanvasElement, state: State) {
-    super(canvas, state)
+  constructor(canvas: HTMLCanvasElement) {
+    super(canvas)
 
     this.initializeCanvas()
 
     this.animationId = null
 
-    this.state.set({ key: 'player', value: this.createPlayer({}) })
+    state.player = this.createPlayer({})
 
     this.animationId = null
     this.projectiles = []
@@ -101,14 +93,8 @@ export default class Game extends Component {
   }
 
   public initialize = () => {
-    this.state.set({ key: 'player', value: this.createPlayer({}) })
-    this.state.set({
-      key: 'stats',
-      value: {
-        ...defaultStats,
-        deaths: this.state.get('stats').deaths + 1,
-      },
-    })
+    state.player = this.createPlayer({})
+    state.stats.deaths += 1
 
     this.animationId = null
     this.particles = []
@@ -136,10 +122,9 @@ export default class Game extends Component {
   }
 
   public spawnEnemies = (): void => {
-    const intervalId = window.setInterval(() => {
+    state.intervalId = window.setInterval(() => {
       this.enemies.push(Enemy.spawn(this.canvas.width, this.canvas.height))
     }, Math.random() * 1000 + 500)
-    this.state.set({ key: 'intervalId', value: intervalId })
   }
 
   public spawnPowerUps = (): void => {
@@ -147,10 +132,8 @@ export default class Game extends Component {
       this.powerUps.push(
         new PowerUp({
           coords: {
-            //x: -30,
-            //y: Math.random() * this.canvas.height,
-            x: 200,
-            y: 200,
+            x: -30,
+            y: Math.random() * this.canvas.height,
           },
           velocity: {
             x: Math.random() + 2,
@@ -158,7 +141,6 @@ export default class Game extends Component {
           },
         })
       )
-      console.log(this.powerUps)
     }, 5000)
   }
 
@@ -177,14 +159,8 @@ export default class Game extends Component {
     this.projectiles.push(new MovingCircle(x, y, 4, 'white', velocity))
 
     // update the projectile stat on new projectile creation
-    this.state.set({
-      key: 'stats',
-      value: {
-        ...this.state.get('stats'),
-        projectiles: this.state.get('stats').projectiles + 1,
-      },
-    })
-    shotsStatEl.innerHTML = `${this.state.get('stats').projectiles}`
+    state.stats.projectiles += 1
+    shotsStatEl.innerHTML = `${state.stats.projectiles}`
   }
 
   public stop = () => {
@@ -208,7 +184,11 @@ export default class Game extends Component {
   }
 
   public animate = (): void => {
-    const player = this.state.get('player')
+    const player = state.player
+
+    if (!player) {
+      return
+    }
 
     this.animationId = requestAnimationFrame(this.animate)
     this.context.fillStyle = 'rgba(0, 0, 0, 0.5)'
@@ -300,8 +280,8 @@ export default class Game extends Component {
             } else {
               // update the stats
               this.updateScoreFromEnemyRadius(enemy.radius)
-              this.state.get('stats').eliminations += 1
-              elimsStatEl.innerHTML = `${this.state.get('stats').eliminations}`
+              state.stats.eliminations += 1
+              elimsStatEl.innerHTML = `${state.stats.eliminations}`
 
               // update player attack damage on score milestones
               player.damage = this.checkForAndGetUpgradeAttack()
@@ -321,7 +301,7 @@ export default class Game extends Component {
   private checkForAndGetUpgradeAttack = (): number => {
     // get the upgrades that are applied to the player
     const appliedUpgrades = PLAYER_UPGRADES.filter(
-      upgrade => this.state.get('stats').score >= upgrade.scoreRequired
+      upgrade => state.stats.score >= upgrade.scoreRequired
     )
     const appliedUpgrade = appliedUpgrades[appliedUpgrades.length - 1]
 
@@ -329,17 +309,10 @@ export default class Game extends Component {
   }
 
   private gameOver = () => {
-    const stats = this.state.get('stats')
-    this.state.set({
-      key: 'stats',
-      value: {
-        ...stats,
-        deaths: stats.deaths + 1,
-      },
-    })
-    deathsStatEl.innerHTML = `${stats.deaths}`
+    state.stats.deaths += 1
+    deathsStatEl.innerHTML = `${state.stats.deaths}`
     this.stop()
-    clearInterval(this.state.get('intervalId'))
+    clearInterval(state.intervalId)
 
     // show game over prompt modal
     gsapFadeIn('#gameOverPromptEl')
@@ -350,10 +323,9 @@ export default class Game extends Component {
   }
 
   private updateScoreFromEnemyRadius = (enemyRadius: number): void => {
-    const stats = this.state.get('stats')
     const score = parseInt(enemyRadius.toFixed(2)) * 100
-    stats.score += score
-    scoreStatEl.innerHTML = `${stats.score}`
+    state.stats.score += score
+    scoreStatEl.innerHTML = `${state.stats.score}`
   }
 
   // Check if the projectile coordinates is out of the canvas's bounds.

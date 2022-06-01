@@ -4,7 +4,6 @@ export const getRandomInt = (min: number, max: number): number => {
   const randMin = Math.ceil(min)
   const randMax = Math.floor(max)
   return Math.floor(Math.random() * (randMax - randMin) + randMin) //The maximum is exclusive and the randMinimum is
-  // inclusive
 }
 
 export const getVelocity = ({

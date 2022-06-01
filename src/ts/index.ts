@@ -1,32 +1,55 @@
 import Game from './Game'
-import State from './State'
 import HUD from './HUD'
+import { butcher } from 'butcherjs'
+import Player from './entities/Player'
+
+type State = {
+  stats: {
+    score: number
+    projectiles: number
+    eliminations: number
+    deaths: number
+    time: number
+  }
+  shootingIntervalId?: number
+  intervalId?: number
+  player: Player | null
+}
 
 const restartBtn = document.querySelector('#restartBtn')!
 const canvasEl = document.querySelector('canvas')!
 
+const defaultState: State = {
+  stats: {
+    score: 0,
+    projectiles: 0,
+    eliminations: 0,
+    deaths: 0,
+    time: 0,
+  },
+  shootingIntervalId: undefined,
+  intervalId: undefined,
+  player: null,
+}
+
+// initialize state
+export const state = butcher({
+  meat: defaultState,
+  name: 'state',
+})
 ;(() => {
   const canvas = document.querySelector('canvas')
 
   if (!canvas) throw new Error('could not retrieve canvas element')
 
-  const defaultState = {
-    stats: {
-      score: 0,
-      projectiles: 0,
-      eliminations: 0,
-      deaths: 0,
-      time: 0,
-    },
-    shootingIntervalId: undefined,
-    intervalId: undefined,
-    player: null,
-  }
-  const state = new State(defaultState)
-  const game = new Game(canvas!, state)
-  const hud = new HUD(canvas!, state)
+  const game = new Game(canvas!)
+  const hud = new HUD(canvas!)
 
-  const player = state.get('player')
+  const player = state.player
+
+  if (!player) {
+    return
+  }
 
   canvasEl.addEventListener('click', event => {
     const { clientX, clientY } = event
@@ -108,9 +131,4 @@ const canvasEl = document.querySelector('canvas')!
     game.restart()
     hud.restart()
   })
-
-  // save game state every 5 minutes
-  window.setInterval(() => {
-    state.save()
-  }, 300000)
 })()

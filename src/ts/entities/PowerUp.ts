@@ -44,7 +44,6 @@ export class PowerUp {
 
     this.image.src = './src/assets/lightningBolt.png'
 
-    console.log(this.image)
     c.restore()
   }
 
