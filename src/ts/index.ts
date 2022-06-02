@@ -1,6 +1,6 @@
 import Game from './Game'
 import HUD from './HUD'
-import { butcher } from 'butcherjs'
+import { butcher, listen } from 'butcherjs'
 import Player from './entities/Player'
 
 type State = {
@@ -19,7 +19,7 @@ type State = {
 const restartBtn = document.querySelector('#restartBtn')!
 const canvasEl = document.querySelector('canvas')!
 
-const defaultState: State = {
+export const defaultState: State = {
   stats: {
     score: 0,
     projectiles: 0,
@@ -45,9 +45,12 @@ export const state = butcher({
   const game = new Game(canvas!)
   const hud = new HUD(canvas!)
 
-  const player = state.player
+  let player = state.player!
+  listen(state, 'player', () => {
+    player = state.player!
+  })
 
-  if (!player) {
+  if (player == null) {
     return
   }
 

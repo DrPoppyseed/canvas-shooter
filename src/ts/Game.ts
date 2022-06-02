@@ -7,7 +7,8 @@ import { gsapFadeIn, gsapFadeOut } from './utils/animations'
 import { PLAYER_UPGRADES } from './utils/constants'
 import { PowerUp } from './entities/PowerUp'
 import Component from './Component'
-import { state } from './index'
+import { defaultState, state } from './index'
+import { listen } from 'butcherjs'
 
 export type Mouse = {
   position: Coords
@@ -94,7 +95,10 @@ export default class Game extends Component {
 
   public initialize = () => {
     state.player = this.createPlayer({})
-    state.stats.deaths += 1
+    state.stats = {
+      ...defaultState.stats,
+      deaths: (state.stats.deaths += 1),
+    }
 
     this.animationId = null
     this.particles = []
@@ -184,9 +188,12 @@ export default class Game extends Component {
   }
 
   public animate = (): void => {
-    const player = state.player
+    let player = state.player!
+    listen(state, 'player', () => {
+      player = state.player!
+    })
 
-    if (!player) {
+    if (player == null) {
       return
     }
 
