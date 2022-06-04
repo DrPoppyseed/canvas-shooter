@@ -1,5 +1,6 @@
 import { Coords, Velocity } from '../types'
 import gsap from 'gsap'
+import imgUrl from '../../assets/img/lightningBolt.png'
 
 export class PowerUp {
   coords: Coords
@@ -42,7 +43,7 @@ export class PowerUp {
     this.image.onload = () =>
       c.drawImage(this.image, this.coords.x, this.coords.y)
 
-    this.image.src = './src/assets/lightningBolt.png'
+    this.image.src = imgUrl
 
     c.restore()
   }
