@@ -7,8 +7,15 @@ import { gsapFadeIn, gsapFadeOut } from './utils/animations'
 import { PLAYER_UPGRADES } from './utils/constants'
 import { PowerUp } from './entities/PowerUp'
 import Component from './Component'
-import { defaultState, state } from './index'
+import { state } from './index'
 import { listen } from 'butcherjs'
+import {
+  initializeState,
+  updateDeathCount,
+  updateEliminationCount,
+  updateProjectileCount,
+  updateScore,
+} from './stateChangers'
 
 export type Mouse = {
   position: Coords
@@ -21,10 +28,6 @@ export type GameStatus = GameStatusTuple[number]
 // querySelectors for HTML Elements
 const gameOverPromptEl =
   document.querySelector<HTMLElement>('#gameOverPromptEl')!
-const scoreStatEl = document.querySelector('#scoreStatEl')!
-const elimsStatEl = document.querySelector('#elimsStatEl')!
-const deathsStatEl = document.querySelector('#deathsStatEl')!
-const shotsStatEl = document.querySelector('#shotsStatEl')!
 //const resumeBtn = document.querySelector('#resumeBtn')!
 
 export default class Game extends Component {
@@ -42,10 +45,17 @@ export default class Game extends Component {
     super(canvas)
 
     this.initializeCanvas()
+    this.handleWindowResize()
 
     this.animationId = null
 
-    state.player = this.createPlayer({})
+    state.player = Game.createPlayer(
+      {
+        canvasHeight: this.canvas.height,
+        canvasWidth: this.canvas.width,
+      },
+      {}
+    )
 
     this.animationId = null
     this.projectiles = []
@@ -72,6 +82,27 @@ export default class Game extends Component {
     return gameStatus
   }
 
+  static createPlayer = (
+    {
+      canvasHeight,
+      canvasWidth,
+    }: {
+      canvasHeight: number
+      canvasWidth: number
+    },
+    {
+      radius = 20,
+      color = 'aqua',
+    }: {
+      radius?: number
+      color?: string
+    }
+  ): Player => {
+    const playerX = canvasWidth / 2
+    const playerY = canvasHeight / 2
+    return new Player({ x: playerX, y: playerY, radius, color })
+  }
+
   public resume = () => {
     this.animate()
     this.spawnEnemies()
@@ -94,11 +125,10 @@ export default class Game extends Component {
   }
 
   public initialize = () => {
-    state.player = this.createPlayer({})
-    state.stats = {
-      ...defaultState.stats,
-      deaths: (state.stats.deaths += 1),
-    }
+    initializeState({
+      canvasHeight: this.canvas.height,
+      canvasWidth: this.canvas.width,
+    })
 
     this.animationId = null
     this.particles = []
@@ -113,16 +143,11 @@ export default class Game extends Component {
     this.canvas.height = innerHeight
   }
 
-  public createPlayer = ({
-    radius = 20,
-    color = 'aqua',
-  }: {
-    radius?: number
-    color?: string
-  }): Player => {
-    const playerX = this.canvas.width / 2
-    const playerY = this.canvas.height / 2
-    return new Player({ x: playerX, y: playerY, radius, color })
+  public handleWindowResize = () => {
+    addEventListener('resize', () => {
+      this.canvas.width = innerWidth
+      this.canvas.height = innerHeight
+    })
   }
 
   public spawnEnemies = (): void => {
@@ -163,8 +188,7 @@ export default class Game extends Component {
     this.projectiles.push(new MovingCircle(x, y, 4, 'white', velocity))
 
     // update the projectile stat on new projectile creation
-    state.stats.projectiles += 1
-    shotsStatEl.innerHTML = `${state.stats.projectiles}`
+    updateProjectileCount()
   }
 
   public stop = () => {
@@ -287,8 +311,7 @@ export default class Game extends Component {
             } else {
               // update the stats
               this.updateScoreFromEnemyRadius(enemy.radius)
-              state.stats.eliminations += 1
-              elimsStatEl.innerHTML = `${state.stats.eliminations}`
+              updateEliminationCount()
 
               // update player attack damage on score milestones
               player.damage = this.checkForAndGetUpgradeAttack()
@@ -316,8 +339,7 @@ export default class Game extends Component {
   }
 
   private gameOver = () => {
-    state.stats.deaths += 1
-    deathsStatEl.innerHTML = `${state.stats.deaths}`
+    updateDeathCount()
     this.stop()
     clearInterval(state.intervalId)
 
@@ -331,8 +353,7 @@ export default class Game extends Component {
 
   private updateScoreFromEnemyRadius = (enemyRadius: number): void => {
     const score = parseInt(enemyRadius.toFixed(2)) * 100
-    state.stats.score += score
-    scoreStatEl.innerHTML = `${state.stats.score}`
+    updateScore(score)
   }
 
   // Check if the projectile coordinates is out of the canvas's bounds.

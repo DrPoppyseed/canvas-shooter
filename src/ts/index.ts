@@ -129,6 +129,7 @@ export const state = butcher({
   game.animate()
   game.spawnEnemies()
   game.spawnPowerUps()
+  hud.animate()
 
   restartBtn.addEventListener('click', () => {
     game.restart()
