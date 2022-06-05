@@ -1,6 +1,13 @@
-# Canvas Shooter
 
-[![https://img.shields.io/badge/Open%20in%20browser-yellowgreen?logo=firebase&logoColor=white&style=flat-square](https://img.shields.io/badge/Open%20in%20browser-yellowgreen?logo=firebase&logoColor=white&style=flat-square)](https://canvas-shooter.web.app)
+<p align="center">
+<img width="50%" alt="Canvas Shooter gif" src="https://user-images.githubusercontent.com/44737273/172000709-b0091809-c6d3-4625-b241-a66a99099d6e.gif" />
+</p>
+
+<h1 align="center">
+  Canvas Shooter
+  <br>
+  <img src="https://img.shields.io/badge/Open%20in%20browser-yellowgreen?logo=firebase&logoColor=white&style=flat-square" alt="hosting link" />
+</h1>
 
 [canvas-shooter](https://github.com/DrPoppyseed/canvas-shooter) is a simple game where you have to shoot down incoming
 enemies to live as long as you can while they try and hit you themselves.
