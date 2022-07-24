@@ -6,7 +6,9 @@
 <h1 align="center">
   Canvas Shooter
   <br>
-  <img src="https://img.shields.io/badge/Open%20in%20browser-yellowgreen?logo=firebase&logoColor=white&style=flat-square" alt="hosting link" />
+  <a href="https://canvas-shooter.web.app">
+    <img src="https://img.shields.io/badge/Open%20in%20browser-yellowgreen?logo=firebase&logoColor=white&style=flat-square" alt="hosting link" />
+  </a>
 </h1>
 
 [canvas-shooter](https://github.com/DrPoppyseed/canvas-shooter) is a simple game where you have to shoot down incoming
